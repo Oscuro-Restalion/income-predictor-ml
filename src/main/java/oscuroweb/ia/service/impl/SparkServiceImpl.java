@@ -48,7 +48,6 @@ public class SparkServiceImpl implements SparkService {
 	@Value("${dataset.file}")
 	private String csvFile;
 	
-//	private long version = 0;
 
 	/**
 	 * Scheduler Service that construct a Machine Learning model to predict the income.
