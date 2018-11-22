@@ -51,6 +51,13 @@ pipeline {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
+        stage('Get input data') {
+            steps {
+                echo "-=- getting income input data -=-"
+                sh "curl https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data >> adult.data"
+                archiveArtifacts artifacts: 'adult.data', fingerprint: true
+            }
+        }
 
         stage('Build Docker image') {
             steps {
@@ -59,16 +66,27 @@ pipeline {
                     step ([
                     	$class: "CopyArtifact",
                  		projectName: "${JOB_NAME}",
+                 		filter : "target/*.jar",
                  		selector: [$class: "SpecificBuildSelector", buildNumber: "${BUILD_NUMBER}"]
              		])
              		
                     def image = docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
-                }            }
+				}            
+			}
         }
 
         stage('Run Docker image') {
             steps {
                 echo "-=- run Docker image -=-"
+                script {
+                    step ([
+                    	$class: "CopyArtifact",
+                 		projectName: "${JOB_NAME}",
+                 		filter: "adult.data",
+                 		target: "/data/income-predictor/input-data/",
+                 		selector: [$class: "SpecificBuildSelector", buildNumber: "${BUILD_NUMBER}"]
+             		])
+         		}
                 sh "docker run -p 8081:8081 --network ci -v ${localPath}:/data/income-predictor -e MODEL_PATH=/data/income-predictor/output-data -e DATASET_PATH=/data/income-predictor/input-data/ --name ${env.CONTAINER_NAME} -d ${IMAGE_NAME}:${env.BUILD_ID}"
             }
         }
